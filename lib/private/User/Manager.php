@@ -46,7 +46,9 @@ use OCP\UserInterface;
 use Symfony\Component\EventDispatcher\GenericEvent;
 
 /**
- * Class Manager
+ * Class User Manager. This class is responsible for access to the \OC\User\User
+ * classes and their caching, providing optimal access.
+ *
  *
  * Hooks available in scope \OC\User:
  * - preSetPassword(\OC\User\User $user, string $password, string $recoverPassword)
@@ -142,13 +144,24 @@ class Manager extends PublicEmitter implements IUserManager {
 	}
 
 	/**
+	 * @param string $uid
+	 * @return boolean
+	 */
+	protected function isCached($uid) {
+		if (isset($this->cachedUsers[$uid])) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
 	 * get a user by user id
 	 *
 	 * @param string $uid
 	 * @return \OC\User\User|null Either the user or null if the specified user does not exist
 	 */
 	public function get($uid) {
-		if (isset($this->cachedUsers[$uid])) { //check the cache first to prevent having to loop over the backends
+		if ($this->isCached($uid)) { //check the cache first to prevent having to loop over the backends
 			return $this->cachedUsers[$uid];
 		}
 		if (is_null($uid)){
@@ -173,7 +186,7 @@ class Manager extends PublicEmitter implements IUserManager {
 	 * @return \OC\User\User
 	 */
 	protected function getUserObject(Account $account, $cacheUser = true) {
-		if (isset($this->cachedUsers[$account->getUserId()])) {
+		if ($this->isCached($account->getUserId())) {
 			return $this->cachedUsers[$account->getUserId()];
 		}
 
