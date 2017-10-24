@@ -100,6 +100,11 @@ class ShareesController extends OCSController  {
 	protected $reachedEndFor = [];
 
 	/**
+	 * @var string
+	 */
+	protected $additionalInfoField;
+
+	/**
 	 * @param IGroupManager $groupManager
 	 * @param IUserManager $userManager
 	 * @param IManager $contactsManager
@@ -131,6 +136,7 @@ class ShareesController extends OCSController  {
 		$this->request = $request;
 		$this->logger = $logger;
 		$this->shareManager = $shareManager;
+		$this->additionalInfoField = $this->config->getAppValue('core', 'user_additional_info_field', '');
 	}
 
 	/**
@@ -183,6 +189,7 @@ class ShareesController extends OCSController  {
 					'value' => [
 						'shareType' => Share::SHARE_TYPE_USER,
 						'shareWith' => $uid,
+						'shareWithAdditionalInfo' => $this->getAdditionalUserInfo($user)
 					],
 				];
 			} else {
@@ -191,6 +198,7 @@ class ShareesController extends OCSController  {
 					'value' => [
 						'shareType' => Share::SHARE_TYPE_USER,
 						'shareWith' => $uid,
+						'shareWithAdditionalInfo' => $this->getAdditionalUserInfo($user)
 					],
 				];
 			}
@@ -215,6 +223,7 @@ class ShareesController extends OCSController  {
 						'value' => [
 							'shareType' => Share::SHARE_TYPE_USER,
 							'shareWith' => $user->getUID(),
+							'shareWithAdditionalInfo' => $this->getAdditionalUserInfo($user)
 						],
 					]);
 				}
@@ -224,6 +233,21 @@ class ShareesController extends OCSController  {
 		if (!$this->shareeEnumeration) {
 			$this->result['users'] = [];
 		}
+	}
+
+	/**
+	 * Returns the additional info to display behind the display name as configured.
+	 *
+	 * @param IUser $user user for which to retrieve the additional info
+	 * @return string|null additional info or null if none to be displayed
+	 */
+	protected function getAdditionalUserInfo(IUser $user) {
+		if ($this->additionalInfoField === 'email') {
+			return $user->getEMailAddress();
+		} else if ($this->additionalInfoField === 'id') {
+			return $user->getUID();
+		}
+		return null;
 	}
 
 	/**
