@@ -466,13 +466,4 @@ class Manager extends PublicEmitter implements IGroupManager {
 
 		return $this->subAdmin;
 	}
-
-	public function inGroup($uid, $gid) {
-		$group = $this->get($gid);
-		$user = $this->userManager->get($uid);
-		if ($group and $user) {
-			return $group->inGroup($user);
-		}
-		return false;
-	}
 }
