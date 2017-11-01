@@ -737,6 +737,23 @@ class FederatedShareProvider implements IShareProvider {
 	 * @inheritdoc
 	 */
 	public function getSharedWith($userId, $shareType, $node, $limit, $offset) {
+		/**
+		 * Fix me. This is a wierd work around
+		 *
+		 * 1) Extract ownername
+		 * 2) nodepath is the last index of the path
+		 * 3) sharedwith is to match users with user@foo/bar
+		 * else only foo was matched
+		 */
+
+		$ownerName = explode('@',$node->getOwner()->getDisplayName())[0];
+		$sharedwith = explode('@',$node->getOwner()->getDisplayName());
+		$nodePath = explode('/', $node->getPath());
+		$sharedwith[0] = $nodePath[1];
+		//$nodePath[1] = $ownerName;
+		$nodePath = array_pop($nodePath);
+		$sharedwith = implode('@', $sharedwith);
+		$sharedwith = rtrim($sharedwith,'/');
 		/** @var IShare[] $shares */
 		$shares = [];
 
@@ -755,11 +772,12 @@ class FederatedShareProvider implements IShareProvider {
 		$qb->setFirstResult($offset);
 
 		$qb->where($qb->expr()->eq('share_type', $qb->createNamedParameter(self::SHARE_TYPE_REMOTE)));
-		$qb->andWhere($qb->expr()->eq('share_with', $qb->createNamedParameter($userId)));
+		$qb->andWhere($qb->expr()->eq('share_with', $qb->createNamedParameter($sharedwith)));
 
 		// Filter by node if provided
 		if ($node !== null) {
-			$qb->andWhere($qb->expr()->eq('file_source', $qb->createNamedParameter($node->getId())));
+			$id = \OC::$server->getRootFolder()->getUserFolder($ownerName)->get($nodePath)->getId();
+			$qb->andWhere($qb->expr()->eq('file_source', $qb->createNamedParameter($id)));
 		}
 
 		$cursor = $qb->execute();
