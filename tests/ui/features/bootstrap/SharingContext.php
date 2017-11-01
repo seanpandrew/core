@@ -65,6 +65,11 @@ class SharingContext extends RawMinkContext implements Context {
 	 */
 	public function theFileFolderIsSharedWithTheUser($folder, $remote, $user) {
 		$this->filesPage->waitTillPageIsloaded($this->getSession());
+		try {
+			$this->filesPage->closeSharingDialog();
+		} catch (Exception $e) {
+			//we don't care
+		}
 		$this->sharingDialog = $this->filesPage->openSharingDialog(
 			$folder, $this->getSession()
 		);
@@ -85,6 +90,11 @@ class SharingContext extends RawMinkContext implements Context {
 	 */
 	public function theFileFolderIsSharedWithTheGroup($folder, $group) {
 		$this->filesPage->waitTillPageIsloaded($this->getSession());
+		try {
+			$this->filesPage->closeSharingDialog();
+		} catch (Exception $e) {
+			//we don't care
+		}
 		$this->sharingDialog = $this->filesPage->openSharingDialog(
 			$folder, $this->getSession()
 		);
@@ -287,18 +297,38 @@ class SharingContext extends RawMinkContext implements Context {
 	}
 
 	/**
-	 * @Then it should not be possible to share the file/folder :name
-	 * @param string $name
+	 * @Then /^it should not be possible to share the (?:file|folder) "([^"]*)"(?: with "([^"]*)")?$/
+	 * @param string $fileName
 	 * @return void
 	 */
-	public function itShouldNotBePossibleToShare($name) {
+	public function itShouldNotBePossibleToShare($fileName, $shareWith = null) {
+		$sharingWasPossible = false;
 		try {
-			$this->theFileFolderIsSharedWithTheUser($name, null, null);
+			$this->theFileFolderIsSharedWithTheUser($fileName, null, $shareWith);
+			$sharingWasPossible = true;
 		} catch (ElementNotFoundException $e) {
-			PHPUnit_Framework_Assert::assertContains(
-				'could not find shar',
-				$e->getMessage()
-			);
+			$possibleMessages = [
+				'could not find share-with-field',
+				'could not find sharing button in fileRow',
+				'could not share with \'' . $shareWith . '\''
+			];
+			foreach ($possibleMessages as $message) {
+				$foundMessage = strpos($e->getMessage(), $message);
+				if ($foundMessage !== false) {
+					break;
+				}
+			}
+			if ($foundMessage === false) {
+				throw new Exception(
+					'exception message has to contain "could not find share-with-field",' .
+					' "could not find sharing button in fileRow" or' .
+					' "could not share with \'...\'"but was: "' .
+					$e->getMessage() . '"'
+				);
+			}
+		}
+		if ($sharingWasPossible === true) {
+			throw new Exception("It was possible to share the file");
 		}
 	}
 
@@ -327,11 +357,11 @@ class SharingContext extends RawMinkContext implements Context {
 	protected function setupSharingConfigs() {
 		$settings = [
 			[
-			'capabilitiesApp' => 'files_sharing',
-			'capabilitiesParameter' => 'api_enabled',
-			'testingApp' => 'core',
-			'testingParameter' => 'shareapi_enabled',
-			'testingState' => true
+				'capabilitiesApp' => 'files_sharing',
+				'capabilitiesParameter' => 'api_enabled',
+				'testingApp' => 'core',
+				'testingParameter' => 'shareapi_enabled',
+				'testingState' => true
 			],
 			[
 				'capabilitiesApp' => 'files_sharing',
